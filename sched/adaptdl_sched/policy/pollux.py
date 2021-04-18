@@ -32,13 +32,13 @@ LOG.setLevel(logging.INFO)
 
 
 class PolluxPolicy(object):
-    def __init__(self):
+    def __init__(self, metrics_options="default"):
         self._prev_states = None
         self._prev_jobs = None
         self._prev_nodes = None
         # Utilization thresholds for cluster autoscaling.
         self._min_util = 0.35
-        self._max_util = 0.65
+        self._max_util = 0.8 if metrics_options == "cost" else 0.65
 
     def allocate_job(self, job_info, nodes):
         """

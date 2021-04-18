@@ -35,15 +35,16 @@ LOG.setLevel(logging.INFO)
 
 
 class AdaptDLAllocator(object):
-    def __init__(self, expander):
+    def __init__(self, expander, metrics_options="default"):
         self._core_api = kubernetes.client.CoreV1Api()
         self._objs_api = kubernetes.client.CustomObjectsApi()
         self._custom_resource = ("adaptdl.petuum.com", "v1",
                                  "", "adaptdljobs")
         self._cluster_expander = expander
-        self._policy = PolluxPolicy()
         # lock for the two corountines in run()
         self._lock = asyncio.Lock()
+        self._metrics_options = metrics_options
+        self._policy = PolluxPolicy(self._metrics_options)
 
     async def run(self):
         # two functionality: (1) watch for new job and start if possible.
@@ -201,7 +202,8 @@ class AdaptDLAllocator(object):
             else:
                 grad_params = GradParams(0.0, 1.0)
             goodput_fn = GoodputFunction(perf_params, grad_params,
-                                         hints["initBatchSize"])
+                                         hints["initBatchSize"],
+                                         self._metrics_options)
             speedup_fn = SpeedupFunction(
                 goodput_fn,
                 hints.get("maxBatchSize"),
