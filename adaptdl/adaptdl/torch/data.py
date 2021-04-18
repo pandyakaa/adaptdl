@@ -139,7 +139,7 @@ class AdaptiveDataLoaderHelper(object):
     _training = None  # The AdaptiveDataLoader which loads training data.
     _current = None  # The AdaptiveDataLoader which is currently iterating.
 
-    def __init__(self, batch_size=1):
+    def __init__(self, batch_size=1, metrics_options="default"):
         # Autoscale batch size fields.
         self._max_batch_size = None
         self._local_bsz_bounds = None
@@ -151,6 +151,7 @@ class AdaptiveDataLoaderHelper(object):
         self._gradient_accumulation = False
         self._speedup_threshold = 1.05
         self._accum_count = 0
+        self._metrics_options = metrics_options
 
     @property
     def current_index(self):
@@ -268,7 +269,7 @@ class AdaptiveDataLoaderHelper(object):
         self.train()
 
     def _sync_local_bsz(self):
-        goodput_fn = get_goodput_fn()
+        goodput_fn = get_goodput_fn(self._metrics_options)
         if self.max_batch_size is None or goodput_fn is None:
             # No autoscale batch size, just divide batch size evenly.
             self._state.current_local_bsz = math.ceil(
@@ -408,8 +409,8 @@ class AdaptiveDataLoaderMixin(object):
     :class:`AdaptiveDataLoader`.
     """
 
-    def __init__(self, batch_size):
-        self._elastic = AdaptiveDataLoaderHelper(batch_size)
+    def __init__(self, batch_size, metrics_options="default"):
+        self._elastic = AdaptiveDataLoaderHelper(batch_size, metrics_options)
 
     def autoscale_batch_size(self, max_batch_size, local_bsz_bounds=None,
                              gradient_accumulation=False):
@@ -500,8 +501,10 @@ class AdaptiveDataLoader(DataLoader, AdaptiveDataLoaderMixin):
         kwargs["sampler"] = ElasticSampler(dataset, shuffle=shuffle)
         kwargs["worker_init_fn"] = _worker_init_wrapper(
             kwargs.get("worker_init_fn"), kwargs.get("num_workers"))
+        metrics_options = kwargs["metrics_options"]
+        kwargs.pop('metrics_options', None)
         super().__init__(dataset, batch_size, shuffle=False, **kwargs)
-        AdaptiveDataLoaderMixin.__init__(self, batch_size)
+        AdaptiveDataLoaderMixin.__init__(self, batch_size, metrics_options)
 
     def __iter__(self):
         """

@@ -53,10 +53,12 @@ GradParams = collections.namedtuple("GradParams", ["sqr", "var"])
 
 class GoodputFunction(object):
 
-    def __init__(self, perf_params, grad_params, init_batch_size):
+    def __init__(self, perf_params, grad_params, init_batch_size,
+                 metrics_options="default"):
         self._perf_params = PerfParams(*perf_params)
         self._grad_params = GradParams(*grad_params)
         self._init_batch_size = init_batch_size
+        self.metrics_options = metrics_options
 
     def __call__(self, num_nodes, num_replicas, atomic_bsz, accum_steps):
         return self.evaluate(num_nodes, num_replicas, atomic_bsz, accum_steps)
@@ -64,8 +66,17 @@ class GoodputFunction(object):
     def evaluate(self, num_nodes, num_replicas, atomic_bsz, accum_steps):
         batch_size = num_replicas * atomic_bsz * (accum_steps + 1)
         assert np.all(self._init_batch_size <= batch_size)
-        return self.throughput(num_nodes, num_replicas, atomic_bsz,
-                               accum_steps) * self.efficiency(batch_size)
+        print(self.metrics_options)
+        result = 0
+        if self.metrics_options == "speed":
+            result = self.throughput(num_nodes, num_replicas, atomic_bsz,
+                                     accum_steps)
+        else:
+            result = self.throughput(num_nodes, num_replicas, atomic_bsz,
+                                     accum_steps) * self.efficiency(batch_size)
+        print(self.metrics_options)
+        print(result)
+        return result
 
     def throughput(self, num_nodes, num_replicas, atomic_bsz, accum_steps):
         accum_time = _predict_accum_time(self._perf_params, atomic_bsz)
