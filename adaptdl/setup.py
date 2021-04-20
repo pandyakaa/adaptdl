@@ -31,7 +31,7 @@ def read_requirements(file_path):
 
 if __name__ == "__main__":
     setuptools.setup(
-        name="adaptdl",
+        name="adaptdl-modified-pandyakaa",
         version=os.getenv("ADAPTDL_VERSION", "0.0.0"),
         author="Petuum Inc. & The AdaptDL Authors",
         author_email="aurick.qiao@petuum.com",
